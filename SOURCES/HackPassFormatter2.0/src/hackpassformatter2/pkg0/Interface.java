@@ -2,6 +2,7 @@ package hackpassformatter2.pkg0;
 
 import java.io.File;
 import javax.swing.DefaultListModel;
+import javax.swing.table.DefaultTableModel;
 
 public class Interface extends javax.swing.JFrame {
     private Controller Control;
@@ -193,13 +194,18 @@ public class Interface extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void InputPathSelectButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_InputPathSelectButtonActionPerformed
-        InputFolder = Control.SelectInput();
+        if(InputPath.getText().length()>2){InputFolder = Control.SelectInput(InputPath.getText());}
+        else{InputFolder = Control.SelectInput();}
         InputPath.setText(Control.GetInputPath(InputFolder));
     }//GEN-LAST:event_InputPathSelectButtonActionPerformed
 
     private void InputPathCaretUpdate(javax.swing.event.CaretEvent evt) {//GEN-FIRST:event_InputPathCaretUpdate
         FileList.setModel(Control.GetInputList(InputFolder));
         ProgressBar.setMaximum(Control.GetMaxValue(InputFolder));
+        String[][] Pass = Control.FormatFiles(InputFolder);
+        String[] Name = {"Tye","Url","Username","Mot de passe"};
+        DefaultTableModel Table = new DefaultTableModel(Pass,Name);
+        PasswordList.setModel(Table);
     }//GEN-LAST:event_InputPathCaretUpdate
 
     private void ExitButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ExitButtonActionPerformed

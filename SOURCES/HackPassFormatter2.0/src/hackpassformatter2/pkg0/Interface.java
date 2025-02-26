@@ -203,7 +203,8 @@ public class Interface extends javax.swing.JFrame {
         FileList.setModel(Control.GetInputList(InputFolder));
         ProgressBar.setMaximum(Control.GetMaxValue(InputFolder));
         String[][] Pass = Control.FormatFiles(InputFolder);
-        String[] Name = {"Tye","Url","Username","Mot de passe"};
+        Pass=Control.RemoveDouble(Pass);
+        String[] Name = {"Type","Url","Username","Mot de passe","Site"};
         DefaultTableModel Table = new DefaultTableModel(Pass,Name);
         PasswordList.setModel(Table);
     }//GEN-LAST:event_InputPathCaretUpdate

@@ -6,6 +6,8 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.DefaultListModel;
@@ -15,6 +17,8 @@ public class Controller {
     private String[] args;
     private Interface IHM;
     private FilenameFilter OnlyTxt;
+    private String[][] Tableau =null;
+    
     /**
      * +Controller(String[]):void
      * @param args -D for directory, -O for the outut file.
@@ -113,14 +117,14 @@ public class Controller {
             if(Content.length()>10){
                 String[] Blocks = TextToBlock(Content);
                 if(Blocks.length>0){
-                    String[][] TempReturn = new String[Blocks.length][4];
+                    String[][] TempReturn = new String[Blocks.length][5];
                     int EmtyBlock=0;
                     for(int i=0;i<Blocks.length;i++){
                         TempReturn[i]=BlockToData(Blocks[i]);
                         if(TempReturn[i]==null){EmtyBlock++;}
                     }
                     if(EmtyBlock>0){
-                        Return = new String[TempReturn.length-EmtyBlock][4];
+                        Return = new String[TempReturn.length-EmtyBlock][5];
                         int j=0;
                         for(int i=0;i<TempReturn.length;i++){
                             if(TempReturn[i]!=null){
@@ -143,7 +147,7 @@ public class Controller {
                         Return = Temp;
                     }
                     else{
-                        String[][] ReturnTmp = new String[Return.length+Temp.length][4];
+                        String[][] ReturnTmp = new String[Return.length+Temp.length][5];
                         for(int i=0;i<Return.length;i++){
                             ReturnTmp[i] = Return[i];
                         }
@@ -181,6 +185,27 @@ public class Controller {
         }
         return Content;
     }
+    public String ReadFile(InputStream File){
+        String Content = "";
+            try {
+                BufferedReader Br = new BufferedReader(new InputStreamReader(File));
+                String Line;
+                while((Line=Br.readLine())!=null){
+                    Content = Content + Line + "\n";
+                }   
+                Br.close();
+            } catch (IOException ex) {}
+        if(Content.endsWith("\n")){
+            Content = Content.substring(0,Content.length()-1);
+        }
+        if(Content.contains(""+(char)0)){
+            Content = Content.replace(""+(char)0, "");
+        }
+        if(Content.contains("\n\n")){
+            Content = Content.replace("\n\n", "\n");
+        }
+        return Content;
+    }
     
     public String[] TextToBlock(String Content){
         String[] Blocks = null;
@@ -205,7 +230,7 @@ public class Controller {
         return Blocks;
     }
     public String[] BlockToData(String Block){
-        String[] Data = new String[4];
+        String[] Data = new String[5];
         if(Block!=null && Block.length()>0 && Block.contains("\n")){
             String[] Splitted = Block.split("\n");
             for(String St: Splitted){
@@ -213,9 +238,16 @@ public class Controller {
                 if(Dat.length>=2){
                     Dat[0] = Dat[0].toLowerCase().replace(" ", "");
                     if(Dat[0].contains("url") && Dat[1].contains("http")){
-                        Data[1] = Dat[1]+":"+Dat[2].substring(0, Dat[2].substring(2).indexOf("/")+2);
+                        Dat[2]=Dat[2].substring(2).replace("www.", "");
+                        if(Dat[2].contains("/")){
+                            Data[1] = Dat[1]+":"+Dat[2].substring(0, Dat[2].indexOf("/"));
+                        }
+                        else{
+                            Data[1]=Dat[2];
+                        }
                         while(Data[1].startsWith(" ")){Data[1]=Data[1].substring(1);}
-                        Data[1] = Data[1].replace("http://", "").replace("https://", "").replace("www.", "").replace("auth.","").replace("espace-client.", "").replace("account.", "").replace("monespace.", "").replace("club.", "").replace("fr-fr.", "").replace("oauth2.", "").replace("connect.", "").replace("assure.", "").replace("cfspart.", "");
+                        Data[1] = Data[1].replace("http://", "").replace("https://", "").replace("www.", "");
+                        Data[1] = Data[1].replace("http:", "").replace("https:", "");
                     }
                     if(Dat[0].contains("url") && Dat[1].contains("android")){
                         Data[1] = Dat[1]+":"+Dat[2].substring(Dat[2].lastIndexOf("==@")+3);
@@ -248,28 +280,142 @@ public class Controller {
                     }
                }
             }
-            Data[0]=GetType(Data[1]);
+            if(Data[1]!=null){
+                String[] S = GetType(Data[1]);
+                Data[0]=S[0];
+                Data[4]=S[1];
+            }
         }
-        if(Data[3].length()<2 || Data[2].length()<2 ||Data[1].length()<2){Data=null;}
+        if(Data[1]==null || Data[2]==null || Data[3]==null || Data[4]==null || Data[3].length()<2 || Data[2].length()<2 ||Data[1].length()<2){Data=null;}
         return Data;
     }
-    public String GetType(String Url){
+    public String[] GetType(String Url){
         String Type = "AUTRE";
-        if(Url.equals("WIFI")){Type="WIFI";}
-        if(Url.contains("leboncoin")){Type="MAGASIN";}
-        if(Url.contains("intersport")){Type="MAGASIN";}
-        if(Url.contains("edf")){Type="DATA";}
-        if(Url.contains("sfr")){Type="INTERNET";}
-        if(Url.contains("orange")){Type="INTERNET";}
-        if(Url.contains("bouygues")){Type="INTERNET";}
-        if(Url.contains("nrj")){Type="INTERNET";}
-        if(Url.contains("generation")){Type="SANTE+";}
-        if(Url.contains("cofidis")){Type="BANQUE";}
-        if(Url.contains("facebook")){Type="SOCIAL";}
-        if(Url.contains("maaf")){Type="SANTE";}
-        if(Url.contains("ameli")){Type="AMELI";}
-        if(Url.contains("caf")){Type="CAF";}
-        if(Url.contains("doctolib")){Type="SANTE";}
-        return Type;
+        String Site = "AUTRE";
+        Url = Url.toLowerCase();
+        
+        if(Type == "AUTRE"){
+            String Content = ReadFile(this.getClass().getResourceAsStream("Data.dat"));
+            if(Content.contains("\n")){
+                for(String S : Content.split("\n")){
+                    if(S.contains(":")){
+                        String[] Si = S.split(":");
+                        if(Si.length>=2){
+                            if(Url.contains(Si[1].toLowerCase())){
+                                Type=Si[0].toUpperCase();
+                                Site = Si[1].toLowerCase();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if(Type == "AUTRE"){
+            if(Url.equals("wifi")){Type="WIFI";Site="wifi";}
+            if(Url.contains("leboncoin")){Type="MAGASIN";}
+            if(Url.contains("intersport")){Type="MAGASIN";}
+            if(Url.contains("edf")){Type="DATA";}
+            if(Url.contains("sfr")){Type="INTERNET";}
+            if(Url.contains("orange")){Type="INTERNET";}
+            if(Url.contains("bouygues")){Type="INTERNET";}
+            if(Url.contains("nrjmobile")){Type="INTERNET";}
+            if(Url.contains("generation")){Type="SANTE+";}
+            if(Url.contains("cofidis")){Type="BANQUE";}
+            if(Url.contains("facebook")){Type="SOCIAL";}
+            if(Url.contains("maaf")){Type="SANTE";}
+            if(Url.contains("ameli")){Type="AMELI";}
+            if(Url.contains("caf")){Type="CAF";}
+            if(Url.contains("doctolib")){Type="SANTE";}
+            if(Url.contains("lassuranceretraite")){Type="SANTE";}
+            if(Url.contains("moncompteformation")){Type="GOUV";}
+            if(Url.contains("natixis")){Type="BANQUE";}
+            if(Url.contains("impots")){Type="IMPOTS";}
+            if(Url.contains("moncompteactivite")){Type="GOUV";}
+            if(Url.contains("lidl")){Type="MAGASIN";}
+            if(Url.contains("cofidis")){Type="BANQUE";}
+            if(Url.contains("fruitz")){Type="RENCONTRES";}
+            if(Url.contains("discord")){Type="SOCIAL";}
+            if(Url.contains("google")){Type="MAIL+";}
+            if(Url.contains("instagram")){Type="SOCIAL";}
+            if(Url.contains("canalplus")){Type="TV+";}
+            if(Url.contains("gmf")){Type="ASSURANCE";}
+            if(Url.contains("bearwww2")){Type="RENCONTRES";}
+            if(Url.contains("gaytryst")){Type="RENCONTRES";}
+            if(Url.contains("grindr")){Type="RENCONTRES";}
+            if(Url.contains("mongars")){Type="RENCONTRES";}
+            if(Url.contains("snapchat")){Type="SOCIAL";}
+            if(Url.contains("uber")){Type="MAGASIN+";}
+            if(Url.contains("darty")){Type="MAGASIN";}
+            if(Url.contains("leclerc")){Type="MAGASIN";}
+            if(Url.contains("leroymerlin")){Type="MAGASIN";}
+            if(Url.contains("bricorive")){Type="MAGASIN";}
+            if(Url.contains("cdiscount")){Type="MAGASIN+";}
+            if(Url.contains("amazon")){Type="MAGASIN+";}
+            if(Url.contains("carrefour")){Type="MAGASIN";}
+            if(Url.contains("netflix")){Type="TV+";}
+            if(Url.contains("redtube")){Type="PORN";}
+            if(Url.contains("xtube")){Type="PORN";}
+            if(Url.contains("cam4")){Type="PORN";}
+            if(Url.contains("xvideos")){Type="PORN";}
+            if(Url.contains("placementdirect")){Type="BANQUE";}
+            if(Url.contains("rbcdirects")){Type="BANQUE";}
+            if(Url.contains("macif")){Type="ASSURANCE";}
+            if(Url.contains("hellobank")){Type="BANQUE";}
+            if(Url.contains("faphouse")){Type="PORN";}
+            if(Url.contains("castorama")){Type="MAGASIN";}
+            if(Url.contains("ikea")){Type="MAGASIN";}
+            if(Url.contains("gulli")){Type="TV";}
+            if(Url.contains("boursorama")){Type="MAGASIN";}
+        }
+        String[] S = {Type,Site};
+        return S;
+    }
+    public String[][] RemoveDouble(String[][] Data){
+        String[][] Return = Data;
+        int Double = 0;
+        boolean Doubleb=false;
+        for(int i=0;i<Data.length-1;i++){
+            if(Data[i][1]==null || Data[i][2].length()<=1){
+                Double++;
+            }
+            else{
+                Doubleb=false;
+                for(int j=i+1;j<Data.length;j++){
+                    if(Data[i][4].toLowerCase().equals(Data[j][4].toLowerCase())){
+                        if(Data[i][2].toLowerCase().equals(Data[j][2].toLowerCase())){
+                            Doubleb=true;
+                        }
+                    }
+                }
+                if(Doubleb){Double++;}
+            }
+            
+        }
+        System.err.println(Data.length+"-"+Double);
+        if(Double>0){
+            Return = new String[Data.length-Double][5];
+            Double=0;
+            Doubleb=false;
+            for(int i=0;i<Data.length;i++){
+                Doubleb = false;
+                for(int j=i+1;j<Data.length;j++){
+                    if(Data[i][4].toLowerCase().equals(Data[j][4].toLowerCase())){
+                        if(Data[i][2].toLowerCase().equals(Data[j][2].toLowerCase())){
+                            Doubleb=true;
+                        }
+                    }
+                    if(Data[i][1]==null || Data[i][1].length()<1){
+                        Doubleb=true;
+                    }
+                }
+                if(!Doubleb){
+                    Return[Double]=Data[i];
+                    Double++;
+                }
+            }
+        }
+        this.Tableau=Return;
+        System.out.println(Tableau[Tableau.length-1][1]);
+        return Return;
     }
 }

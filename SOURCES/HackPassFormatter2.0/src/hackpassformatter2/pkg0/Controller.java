@@ -1,15 +1,15 @@
 package hackpassformatter2.pkg0;
 
+import java.awt.Dimension;
+import java.awt.Toolkit;
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.swing.DefaultListModel;
 import javax.swing.JFileChooser;
 
@@ -18,16 +18,27 @@ public class Controller {
     private Interface IHM;
     private FilenameFilter OnlyTxt;
     private String[][] Tableau =null;
-    
-    /**
-     * +Controller(String[]):void
-     * @param args -D for directory, -O for the outut file.
-     */
+
     public Controller(String[] args){
         this.args = args;
         OnlyTxt = (File dir, String name) -> {return name.toLowerCase().endsWith(".txt");};
         if(args.length>2){
-            
+            String From=null;String To = null;
+            for(int i=0;i<args.length;i++){
+                if(args[i].toLowerCase().equals("-F")){
+                    From = args[i+1];
+                }
+                if(args[i].toLowerCase().equals("-T")){
+                    To = args[i+1];
+                }
+            }
+            if(From!=null && To != null){
+                String[][] Pass = FormatFiles(new File(From));
+                Pass=RemoveDouble(Pass);
+                if(Pass.length>0){
+                    Save(new File(To));
+                }
+            }
         }
         else{
             try {
@@ -41,6 +52,8 @@ public class Controller {
                 System.err.println(ex.getLocalizedMessage());
             }
             IHM = new Interface(this);
+            Dimension Dim = Toolkit.getDefaultToolkit().getScreenSize();
+            IHM.setLocation(Dim.width/2-IHM.getSize().width/2,Dim.height/2-IHM.getSize().height/2);
             IHM.setVisible(true);
         }
     }
@@ -68,6 +81,24 @@ public class Controller {
             Return = Chooser.getSelectedFile();
         }
         return Return;
+    }    
+    public File SelectOutput(){
+        File Return = null;
+        JFileChooser Chooser = new JFileChooser(System.getProperty("user.home")+"/Desktop");
+        Chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+        if(Chooser.showOpenDialog(null)==JFileChooser.APPROVE_OPTION){
+            Return = Chooser.getSelectedFile();
+        }
+        return Return;
+    }
+    public File SelectOutput(String From){
+        File Return = null;
+        JFileChooser Chooser = new JFileChooser(From);
+        Chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+        if(Chooser.showOpenDialog(null)==JFileChooser.APPROVE_OPTION){
+            Return = Chooser.getSelectedFile();
+        }
+        return Return;
     }
     public String GetInputPath(File F){
         String Path="";
@@ -84,6 +115,13 @@ public class Controller {
         
         return Path;
     }
+    public String GetOutputPath(File F){
+        String Path="";
+        if(F!=null && !F.exists()){
+            try {Path = F.getCanonicalPath();} catch (IOException ex) {}
+        }
+        return Path;
+    }
     public DefaultListModel<String> GetInputList(File F){
         DefaultListModel<String> Liste = new DefaultListModel<>();
         if(F!=null && F.exists() && F.isFile() && F.getName().toLowerCase().endsWith(".txt")){
@@ -96,7 +134,6 @@ public class Controller {
         }
         return Liste;
     }
-    
     public int GetMaxValue(File F){
         int i = 0;
          if(F!=null && F.exists() && F.isFile() && F.getName().toLowerCase().endsWith(".txt")){
@@ -109,10 +146,9 @@ public class Controller {
         }
         return i;
     }
-    
     public String[][] FormatFiles(File F){
         String[][] Return = null;
-        if(F.exists() && F.isFile() && F.getName().toLowerCase().endsWith(".txt")){
+        if(F!=null && F.exists() && F.isFile() && F.getName().toLowerCase().endsWith(".txt")){
             String Content = ReadFile(F);
             if(Content.length()>10){
                 String[] Blocks = TextToBlock(Content);
@@ -138,6 +174,7 @@ public class Controller {
                     }
                 }
             }
+            IHM.AddValue((int)F.length());
         }
         else if(F.exists() && F.isDirectory()){
             for(File Fi : F.listFiles(OnlyTxt)){
@@ -157,11 +194,11 @@ public class Controller {
                         Return = ReturnTmp;
                     }
                 }
+                IHM.AddValue((int)Fi.length());
             }
         }
         return Return;
     }
-    
     public String ReadFile(File File){
         String Content = "";
         if(File.exists() && File.isFile() && File.getName().endsWith(".txt") && File.length()>0){
@@ -206,7 +243,6 @@ public class Controller {
         }
         return Content;
     }
-    
     public String[] TextToBlock(String Content){
         String[] Blocks = null;
         if(Content.length()>0 && Content.contains("==================================================")){
@@ -391,7 +427,6 @@ public class Controller {
             }
             
         }
-        System.err.println(Data.length+"-"+Double);
         if(Double>0){
             Return = new String[Data.length-Double][5];
             Double=0;
@@ -415,7 +450,41 @@ public class Controller {
             }
         }
         this.Tableau=Return;
-        System.out.println(Tableau[Tableau.length-1][1]);
         return Return;
+    }
+    public boolean WriteFile(String Content, File F){
+        boolean Validite = false;
+        if(F!=null && !F.exists()){
+            try {
+                F.createNewFile();
+                FileWriter Fw = new FileWriter(F);
+                Fw.write(Content);
+                Fw.close();
+                Validite = true;
+            } catch (IOException ex) {
+                System.err.println(ex.getLocalizedMessage());
+            }
+        }
+        return Validite;
+    }
+    public boolean Save(File F){
+        boolean Validite = false;
+        String Content = "";
+        if(Tableau.length>0){
+            for(String[] Line : Tableau){
+                for(String S : Line){
+                    Content = Content+S+";";
+                }
+                if(Content.endsWith(";")){
+                    Content = Content.substring(0,Content.length()-1);
+                }
+                Content = Content+"\n";
+            }
+            if(Content.endsWith("\n")){
+                Content = Content.substring(0,Content.length()-1);
+            }
+            Validite = WriteFile(Content, F);
+        }
+        return Validite;
     }
 }

@@ -2,11 +2,16 @@ package hackpassformatter2.pkg0;
 
 import java.io.File;
 import javax.swing.DefaultListModel;
+import javax.swing.JDialog;
+import javax.swing.JOptionPane;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableModel;
 
 public class Interface extends javax.swing.JFrame {
     private Controller Control;
     private File InputFolder = null;
+    private File OutputFolder = null;
+    private String[] ColumnName= {"Type","Url","Username","Password","Site"};
     public Interface(Controller Control) {
         this.Control=Control;
         initComponents();
@@ -74,21 +79,38 @@ public class Interface extends javax.swing.JFrame {
         jLabel3.setMinimumSize(new java.awt.Dimension(53, 30));
 
         OutputPathSelectButton.setText("Parcourrir");
+        OutputPathSelectButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                OutputPathSelectButtonActionPerformed(evt);
+            }
+        });
+
+        OutputPath.addCaretListener(new javax.swing.event.CaretListener() {
+            public void caretUpdate(javax.swing.event.CaretEvent evt) {
+                OutputPathCaretUpdate(evt);
+            }
+        });
 
         PasswordList.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
-                {null, null, null, null},
-                {null, null, null, null},
-                {null, null, null, null},
-                {null, null, null, null}
+                {null, null, null, null, null},
+                {null, null, null, null, null},
+                {null, null, null, null, null},
+                {null, null, null, null, null}
             },
             new String [] {
-                "Title 1", "Title 2", "Title 3", "Title 4"
+                "Type", "Url", "Username", "Password", "Site"
             }
         ));
         jScrollPane2.setViewportView(PasswordList);
 
         SaveButton.setText("Save");
+        SaveButton.setEnabled(false);
+        SaveButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                SaveButtonActionPerformed(evt);
+            }
+        });
 
         ExitButton.setText("Exit");
         ExitButton.addActionListener(new java.awt.event.ActionListener() {
@@ -98,6 +120,7 @@ public class Interface extends javax.swing.JFrame {
         });
 
         ClearButton.setText("Clear");
+        ClearButton.setEnabled(false);
         ClearButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 ClearButtonActionPerformed(evt);
@@ -202,11 +225,22 @@ public class Interface extends javax.swing.JFrame {
     private void InputPathCaretUpdate(javax.swing.event.CaretEvent evt) {//GEN-FIRST:event_InputPathCaretUpdate
         FileList.setModel(Control.GetInputList(InputFolder));
         ProgressBar.setMaximum(Control.GetMaxValue(InputFolder));
+        if(ProgressBar.getMaximum()>2){ClearButton.setEnabled(true);}
         String[][] Pass = Control.FormatFiles(InputFolder);
         Pass=Control.RemoveDouble(Pass);
-        String[] Name = {"Type","Url","Username","Mot de passe","Site"};
-        DefaultTableModel Table = new DefaultTableModel(Pass,Name);
+        DefaultTableModel Table = new DefaultTableModel(Pass,ColumnName);
         PasswordList.setModel(Table);
+        if(Pass.length>0){
+            if(OutputPath.getText().length()>0){
+                SaveButton.setEnabled(true);
+            }
+            else{
+                SaveButton.setEnabled(false);
+            }
+        }
+        else{
+            SaveButton.setEnabled(false);
+        }
     }//GEN-LAST:event_InputPathCaretUpdate
 
     private void ExitButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ExitButtonActionPerformed
@@ -215,8 +249,44 @@ public class Interface extends javax.swing.JFrame {
 
     private void ClearButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ClearButtonActionPerformed
         InputPath.setText("");
+        OutputPath.setText("");
         FileList.setModel(new DefaultListModel<>());
+        PasswordList.setModel(new DefaultTableModel(ColumnName, 0));
+        ClearButton.setEnabled(false);
     }//GEN-LAST:event_ClearButtonActionPerformed
+
+    private void OutputPathSelectButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_OutputPathSelectButtonActionPerformed
+         if(OutputPath.getText().length()>2){OutputFolder = Control.SelectOutput(OutputPath.getText());}
+        else{OutputFolder = Control.SelectOutput();}
+        OutputPath.setText(Control.GetOutputPath(OutputFolder));
+    }//GEN-LAST:event_OutputPathSelectButtonActionPerformed
+
+    private void SaveButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_SaveButtonActionPerformed
+        Control.Save(OutputFolder);
+        InputPath.setText("");
+        OutputPath.setText("");
+        ClearButton.setEnabled(false);
+        SaveButton.setEnabled(false);
+        FileList.setModel(new DefaultListModel<>());
+        PasswordList.setModel(new DefaultTableModel(ColumnName, 0));
+        ProgressBar.setValue(0);
+        ProgressBar.setMaximum(100);
+        JOptionPane.showMessageDialog(this, "The save was successfull", "Success", JOptionPane.INFORMATION_MESSAGE);
+    }//GEN-LAST:event_SaveButtonActionPerformed
+
+    private void OutputPathCaretUpdate(javax.swing.event.CaretEvent evt) {//GEN-FIRST:event_OutputPathCaretUpdate
+        if(PasswordList.getModel().getColumnCount()>0){
+            if(OutputPath.getText().length()>0){
+                SaveButton.setEnabled(true);
+            }
+            else{
+                SaveButton.setEnabled(false);
+            }
+        }
+        else{
+            SaveButton.setEnabled(false);
+        }
+    }//GEN-LAST:event_OutputPathCaretUpdate
     public static void main(String args[]) {
         //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
         /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
